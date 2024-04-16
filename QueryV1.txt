@@ -1,0 +1,167 @@
+CREATE SCHEMA client;
+CREATE SCHEMA mang;
+----------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------
+CREATE TABLE client.Guest(
+	Guest_ID int primary key,
+	F_Name nvarchar(20),
+	M_Name nvarchar(20),
+	L_Name nvarchar(20),
+	date_of_birth date,
+	Age int,
+	Job nvarchar(20),
+	GuestType nvarchar(20),
+	E_Name nvarchar(20),
+	Phone nvarchar(20),
+	LAddress nvarchar(20),
+	City nvarchar(20),
+	Country nvarchar(20),
+	AdditionalInfo nvarchar(50),
+	Reservation_ID int
+);
+
+ALTER TABLE client.Guest
+ADD 
+	CONSTRAINT Guest_fk1 foreign key(Reservation_ID) references mang.Reservation;
+-------
+Data
+-------
+INSERT INTO client.Guest(F_Name,M_Name,L_Name,date_of_birth,Job,GuestType,E_Name,Phone,LAddress,City,Country,AdditionalInfo,Reservation_ID)
+VALUES
+		('Mohamed','Ahmed','Ali','1970-8-10','Engineer','Temporary','AAA@Hotel.com',123456789,'20- Almaza St','Alexandria','Egypt','',1),
+		('Said','Ahmed','Mohamed','1990-8-10','Doctor','Redundunt','SAM@Hotel.com',123456789,'21-Nozha St','Cairo','Egypt','Dont knock the door after 10pm',2);
+
+------->UPDATE client.Guest
+------->SET Age = DATEDIFF(YEAR, date_of_birth, GETDATE());
+----------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------
+CREATE TABLE mang.Room(
+	Room_ID int primary key,
+	Room_Type char,
+	RLocation nvarchar(30),
+	CurrentlyFree nvarchar(1),
+	AccomendationType nvarchar(20),
+	IntialPrice int
+);
+-------
+Data
+-------
+INSERT INTO mang.Room(Room_ID,Room_Type,RLocation,CurrentlyFree,AccomendationType,IntialPrice)
+VALUES 
+		(2,'M','1st Floor 1st Room near Elevator','N','Full-Medium-None',500),
+		(3,'H','2rd Floor 1st Room near Elevator','Y','Full-Medium',1000),
+		(4,'V','3rd Floor 1st Room near Elevator','N','Full-Pansion',1500);
+
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
+CREATE TABLE mang.Invoice(
+	Invoice_ID int primary key,
+	RoomPrice int,
+	MealCost int,
+	Gurantee int
+);
+Alter table mang.Invoice 
+ADD TotalPrice int ;
+UPDATE mang.Invoice
+SET TotalPrice = (RoomPrice+MealCost+Gurantee);
+-------
+Data
+-------
+INSERT INTO mang.Invoice(Invoice_Id,RoomPrice,MealCost,Gurantee)
+VALUES 	
+	(1,500,100,0),
+	(2,1500,500,600);
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
+CREATE TABLE mang.Reservation(
+	Reservation_ID int primary key,
+	CheckIn date,
+	CheckOut date,
+	adults int,
+	children int,
+	meals char,
+	Room_ID int foreign key references mang.Room(Room_ID),
+	Inovice_ID int foreign key references mang.Invoice(Invoice_ID)
+);
+-------
+Data
+-------
+INSERT INTO mang.Reservation(Reservation_ID,CheckIn,CheckOut,adults,childred,meals,Room_ID,Inovice_ID)
+VALUES
+		(1,'2023-8-29','2023-9-1',2,1,'Y',2,1),
+		(2,'2023-8-30','2023-9-2',3,0,'Y',4,2);
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
+//Getting all Invoices from table 
+select *,(RoomPrice+MealCost+Gurantee)TotalPrice from mang.Invoice;
+
+//Create Trigger for checkout column
+DROP TRIGGER mang.Reservation_trigger;
+
+CREATE TRIGGER Reservation_trigger
+ON mang.Reservation
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+  IF ((SELECT Room_ID FROM inserted) IS NULL) 
+    print('An Error Occurs Please Make sure  you fill all data')
+END;
+
+INSERT INTO mang.Reservation(Reservation_ID, CheckIn, CheckOut, adults, childred, meals, Inovice_ID)
+VALUES (3, '2023-08-29', '2023-09-01', 2, 1, 'Y', 2);
+
+SELECT * FROM mang.Reservation;
+
+//Create a cursor
+DECLARE @currentlyfree CHAR(1);
+DECLARE @id INT;
+
+DECLARE db_cursor CURSOR FOR  
+SELECT Room_ID, CurrentlyFree
+FROM mang.Room;
+
+OPEN db_cursor   
+FETCH NEXT FROM db_cursor INTO @id, @currentlyfree   
+
+WHILE @@FETCH_STATUS = 0   
+BEGIN   
+    IF @currentlyfree IN ('Y')
+        PRINT 'Row ' + CAST(@id AS VARCHAR(10)) + ': currentlyfree has a valid value.'
+    ELSE
+        PRINT 'Row ' + CAST(@id AS VARCHAR(10)) + ': currentlyfree does not have a valid value.'
+
+    FETCH NEXT FROM db_cursor INTO @id, @currentlyfree   
+END   
+
+CLOSE db_cursor   
+DEALLOCATE db_cursor;
+
+
+//Indexing
+CREATE INDEX i1 ON client.Guest (Guest_ID);
+CREATE INDEX i2 ON mang.Reservation (Reservation_ID);
+CREATE INDEX i3 ON mang.Room (Room_ID);
+CREATE INDEX i4 ON mang.Invoice (Invoice_ID);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
